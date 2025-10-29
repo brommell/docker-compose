@@ -1,0 +1,40 @@
+services:
+  victorialogs:
+    image: docker.io/victoriametrics/victoria-logs:v1.36.1
+    container_name: victorialogs
+    restart: unless-stopped
+    networks:
+      - victorialogs
+    command:
+      - -storageDataPath=/vlogs
+      - -loggerFormat=json
+      - -retentionPeriod=30d
+      # optional: enable direct syslog ingestion
+      # - -syslog.listenAddr.tcp=0.0.0.0:8094
+    ports:
+      - "9428:9428"
+      # - "8094:8094"   # uncomment if using syslog input
+    volumes:
+      - type: bind
+        source: /opt/victorialogs/vldata/vlogs
+        target: /vlogs
+
+  nginx:
+    image: nginx:1.29.3-alpine
+    depends_on:
+      - victorialogs
+    container_name: victorialogs-nginx
+    networks:
+      - victorialogs
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+
+
+networks:
+  victorialogs:
+    driver: bridge
